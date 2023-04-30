@@ -29,31 +29,41 @@ Writer: This is a title for the above sentence/topic:"""
 prompt_template = PromptTemplate(input_variables=["user_input"], template=template)
 title_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="title")
 
-# This is an LLMChain to write an outline of a picture book given a title and user input.
+# This is an LLMChain to write an synopsis of a picture book given a title and user input.
 llm = OpenAI(temperature=.7)
-template = """You are a creative picture book writer. Given the title of the picture book and the sentence/topic on which it's title is based, it is your job to write an outline for that picture book.
+template = """You are a creative picture book writer. Given the title of the 20 page picture book and the sentence/topic on which it's title is based, it is your job to write a synopsis for the picture book.
 
 Title: {title}
 Sentence/topic: {user_input}
-Outline from a a creative picture book writer of the above play:"""
+Synopsis from a a creative picture book writer of the above picture book:"""
 prompt_template = PromptTemplate(input_variables=["title","user_input"], template=template)
-outline_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="outline")
+synopsis_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="synopsis")
 
-# This is the overall chain where we run these two chains in sequence.
+
+# This is an LLMChain to write the text and image descriptions of a picture book given title and synopsis.
+llm = OpenAI(temperature=.7)
+template = """You are a creative picture book writer. Given the title and synopsis of the 20 page picture book, it is your job to write the text that should appear on each of the 20 pages as well as a description for the image to accompany the text on each page.
+
+Title: {title}
+Synopsis:
+{synopsis}
+Text and image description for each of the 20 pages from a creative picture book writer for the above picture book:"""
+prompt_template = PromptTemplate(input_variables=["title","synopsis"], template=template)
+text_and_image_description_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="text_and_image_description")
+
+# This is the overall chain where we run these three chains in sequence.
 overall_chain = SequentialChain(
-    chains=[title_chain, outline_chain],
+    chains=[title_chain, synopsis_chain, text_and_image_description_chain],
     input_variables=["user_input"],
     # Here we return multiple variables
-    output_variables=["title", "outline"],
+    output_variables=["title", "synopsis","text_and_image_description"],
     verbose=True)
 
 x = overall_chain({"user_input":"Martian fleet inspects rebel ship pretending to be freighter"})
 
 print(x["title"])
-
-
-
-
+print(x["synopsis"])
+print(x["text_and_image_description"])
 
 
 
