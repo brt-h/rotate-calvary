@@ -17,6 +17,7 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.chains import SequentialChain
 from langchain.callbacks import get_openai_callback
+from langchain.chains import OpenAIModerationChain
 
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
@@ -75,7 +76,16 @@ with get_openai_callback() as cb:
     print(f"Completion Tokens: {cb.completion_tokens}")
     print(f"Total Cost (USD): ${cb.total_cost}")
 
-x = overall_chain({"user_input":"Martian fleet inspects rebel ship pretending to be freighter"})
+# User input
+# user_input = "Martian fleet inspects rebel ship pretending to be freighter"
+user_input = "I will kill you"
+
+# Moderation check
+if OpenAIModerationChain(error=True).run(user_input):
+    print("Vibe check passed.(moderation=True)")
+    x = overall_chain({"user_input":user_input})
+else:
+    print("Vibe check failed.(moderation=False)")
 
 print("Title:",x["title"])
 print("Synopsis:",x["synopsis"])
