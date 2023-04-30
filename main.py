@@ -40,30 +40,42 @@ prompt_template = PromptTemplate(input_variables=["title","user_input"], templat
 synopsis_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="synopsis")
 
 
-# This is an LLMChain to write the text and image descriptions of a picture book given title and synopsis.
+# This is an LLMChain to write the text descriptions of a picture book given title and synopsis.
 llm = OpenAI(temperature=.7)
-template = """You are a creative picture book writer. Given the title and synopsis of the 20 page picture book, it is your job to write the text that should appear on each of the 20 pages as well as a description for the image to accompany the text on each page.
+template = """You are a creative picture book writer. Given the title and synopsis of the 20 page picture book, it is your job to write the text that should appear on each of the 20 pages.
 
 Title: {title}
 Synopsis:
 {synopsis}
-Text and image description for each of the 20 pages from a creative picture book writer for the above picture book:"""
+Text for each of the 20 pages from a creative picture book writer for the above picture book:"""
 prompt_template = PromptTemplate(input_variables=["title","synopsis"], template=template)
-text_and_image_description_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="text_and_image_description")
+text_description_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="text_description")
+
+# This is an LLMChain to write the image descriptions of a picture book given title and synopsis.
+llm = OpenAI(temperature=.7)
+template = """You are an expert at creating input prompts for text-to-image neural networks. The system acepts as correct the query string,where all arguments are separated by commas. The words in prompt are crucial. Users need to prompt what they want to see, specifying artist names, media sources, or art styles to get desired results. It is more sensitive to precise wording. That includes adjectives and prepositions like “in front of [x]“, and “taken by [camera name]“. It also supports weights. By bracketing the words you can change their importance. For example, (rainy) would be twice as important compared to "rainy" for the model, and [rainy] would be half as important. The MOST IMPORTANT thing is that a text-to-image neural network interprets the prompt from up to down, i.e. what is listed at the beginning of the prompt is more significant than what is listed near the end of the prompt. So it is recommended to place the subject of prompt in the beginning, characteristical tags in the middle and misc tags like lighting or camera settings near the end. Tags must be separated by commas, commas are not allowed in the query (what needs to be drawn), because the system treats it as one big tag. Given the title and text for each page, it is your job to write the prompt for the image that should accompany the text on each page.
+
+Title: {title}
+Text for each page:
+{text_description}
+Text-to-image neural network input prompts for each of the 20 pages for the above picture book:"""
+prompt_template = PromptTemplate(input_variables=["title","text_description"], template=template)
+image_description_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="image_description")
 
 # This is the overall chain where we run these three chains in sequence.
 overall_chain = SequentialChain(
-    chains=[title_chain, synopsis_chain, text_and_image_description_chain],
+    chains=[title_chain, synopsis_chain, text_description_chain, image_description_chain],
     input_variables=["user_input"],
     # Here we return multiple variables
-    output_variables=["title", "synopsis","text_and_image_description"],
+    output_variables=["title","synopsis","text_description","image_description"],
     verbose=True)
 
 x = overall_chain({"user_input":"Martian fleet inspects rebel ship pretending to be freighter"})
 
-print(x["title"])
-print(x["synopsis"])
-print(x["text_and_image_description"])
+print("Title:",x["title"])
+print("Synopsis:",x["synopsis"])
+print("Text Description:",x["text_description"])
+print("Image Description:",x["image_description"])
 
 
 
