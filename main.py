@@ -24,7 +24,7 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 openai.api_key = OPENAI_API_KEY
 
 # llm = OpenAI(temperature=.7) # old known good but expensive model
-llm = ChatOpenAI(model="gpt-3.5-turbo",temperature=.7)
+llm = ChatOpenAI(model="gpt-3.5-turbo",temperature=.2)
 
 # This is an LLMChain to create a title given a scentence/topic.
 template = """You are a creative picture book writer. Given a sentence/topic, it is your job to create a title suitable for a picture book.
@@ -65,25 +65,25 @@ prompt_template = PromptTemplate(input_variables=["title","text_description"], t
 image_description_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="image_description")
 
 # This is the overall chain where we run these three chains in sequence.
-with get_openai_callback() as cb:
-    overall_chain = SequentialChain(
-        chains=[title_chain, synopsis_chain, text_description_chain, image_description_chain],
-        input_variables=["user_input"],
-        output_variables=["title","synopsis","text_description","image_description"],
-        verbose=True)
-    print(f"Total Tokens: {cb.total_tokens}")
-    print(f"Prompt Tokens: {cb.prompt_tokens}")
-    print(f"Completion Tokens: {cb.completion_tokens}")
-    print(f"Total Cost (USD): ${cb.total_cost}")
+overall_chain = SequentialChain(
+    chains=[title_chain, synopsis_chain, text_description_chain, image_description_chain],
+    input_variables=["user_input"],
+    output_variables=["title","synopsis","text_description","image_description"],
+    verbose=True)
 
 # User input
-# user_input = "Martian fleet inspects rebel ship pretending to be freighter"
-user_input = "I will kill you"
+user_input = "Martian fleet inspects rebel ship pretending to be freighter"
+# user_input = "I will kill you" # this prompt can be used to test moderation
 
-# Moderation check
+# Main thread: moderation check, model usage information, call chain with user input
 if OpenAIModerationChain(error=True).run(user_input):
     print("Vibe check passed.(moderation=True)")
-    x = overall_chain({"user_input":user_input})
+    with get_openai_callback() as cb:
+        x = overall_chain({"user_input":user_input})
+        print(f"Total Tokens: {cb.total_tokens}")
+        print(f"Prompt Tokens: {cb.prompt_tokens}")
+        print(f"Completion Tokens: {cb.completion_tokens}")
+        print(f"Total Cost (USD): ${cb.total_cost}")
 else:
     print("Vibe check failed.(moderation=False)")
 
