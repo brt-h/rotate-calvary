@@ -1,3 +1,5 @@
+# TODO: add langchain parser, integrate generate_illustration.py, and integrate fastapi
+
 # Some dependancies:
 # !pip install python-dotenv
 # !pip install fastapi
@@ -6,11 +8,9 @@
 # !pip install langchain
 
 import os
-import json
 from dotenv import load_dotenv
 from fastapi import FastAPI
 import openai # gpt-3.5-turbo-0301
-import re
 from langchain.llms import OpenAI # was used for old known good but expensive model
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain
@@ -23,8 +23,9 @@ from langchain.chains import OpenAIModerationChain
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 openai.api_key = OPENAI_API_KEY
 
-# llm = OpenAI(temperature=.7) # old known good but expensive model
-llm = ChatOpenAI(model="gpt-3.5-turbo",temperature=.2)
+# llm = OpenAI(model="text-davinci-003",temperature=.7) # costs about ~$0.045 per run, seems to work consistently
+# llm = ChatOpenAI(model="gpt-3.5-turbo",temperature=.7) # costs about ~$0.005 per run, seems pront to formatting errors, might be slower as well
+llm = ChatOpenAI(model="gpt-4", temperature=.7, request_timeout=120) # costs about ~$0.065 per run, seems higher quality, might be slowest
 
 # This is an LLMChain to create a title given a scentence/topic.
 template = """You are a creative picture book writer. Given a sentence/topic, it is your job to create a title suitable for a picture book.
@@ -87,7 +88,7 @@ overall_chain = SequentialChain(
     verbose=True)
 
 # User input
-user_input = "Martian fleet inspects rebel ship pretending to be freighter"
+user_input = "Fire spirit in the shape of a wolf guards the mountain from the humans who come to clear the forest"
 # user_input = "I will kill you" # this prompt can be used to test moderation
 
 # Main thread: moderation check, model usage information, call chain with user input
@@ -102,10 +103,10 @@ if OpenAIModerationChain(error=True).run(user_input):
 else:
     print("Vibe check failed.(moderation=False)")
 
-print("Title:",x["title"])
-print("Synopsis:",x["synopsis"])
-print("Text Description:",x["text_description"])
-print("Image Description:",x["image_description"])
+print("Title: ",x["title"])
+print("Synopsis: ",x["synopsis"])
+print("Text Description: ",x["text_description"])
+print("Image Description: ",x["image_description"])
 
 
 
