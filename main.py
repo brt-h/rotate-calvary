@@ -15,9 +15,10 @@ from langchain.llms import OpenAI
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.chains import SequentialChain
+from langchain.callbacks import get_openai_callback
+
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-print(OPENAI_API_KEY)
 openai.api_key = OPENAI_API_KEY
 
 # This is an LLMChain to create a title given a scentence/topic.
@@ -63,12 +64,17 @@ prompt_template = PromptTemplate(input_variables=["title","text_description"], t
 image_description_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="image_description")
 
 # This is the overall chain where we run these three chains in sequence.
-overall_chain = SequentialChain(
-    chains=[title_chain, synopsis_chain, text_description_chain, image_description_chain],
-    input_variables=["user_input"],
-    # Here we return multiple variables
-    output_variables=["title","synopsis","text_description","image_description"],
-    verbose=True)
+with get_openai_callback() as cb:
+    overall_chain = SequentialChain(
+        chains=[title_chain, synopsis_chain, text_description_chain, image_description_chain],
+        input_variables=["user_input"],
+        # Here we return multiple variables
+        output_variables=["title","synopsis","text_description","image_description"],
+        verbose=True)
+    print(f"Total Tokens: {cb.total_tokens}")
+    print(f"Prompt Tokens: {cb.prompt_tokens}")
+    print(f"Completion Tokens: {cb.completion_tokens}")
+    print(f"Total Cost (USD): ${cb.total_cost}")
 
 x = overall_chain({"user_input":"Martian fleet inspects rebel ship pretending to be freighter"})
 
