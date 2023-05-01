@@ -107,38 +107,29 @@ total_pages = 20
 #     return {"result": output}
 
 
-# Main thread: moderation check, model usage information, call chain with user input
-if OpenAIModerationChain(error=True).run(user_input):
-    print("Vibe check passed.(moderation=True)")
-    with get_openai_callback() as cb:
-        x = overall_chain({"user_input":user_input})
-        print(f"Total Tokens: {cb.total_tokens}")
-        print(f"Prompt Tokens: {cb.prompt_tokens}")
-        print(f"Completion Tokens: {cb.completion_tokens}")
-        print(f"Total Cost (USD): ${cb.total_cost}")
-else:
-    print("Vibe check failed.(moderation=False)")
+def main():
+    # Main thread: moderation check, model usage information, call chain with user input
+    if OpenAIModerationChain(error=True).run(user_input):
+        print("Vibe check passed.(moderation=True)")
+        with get_openai_callback() as cb:
+            x = overall_chain({"total_pages":total_pages,"user_input":user_input})
+            print(f"Total Tokens: {cb.total_tokens}")
+            print(f"Prompt Tokens: {cb.prompt_tokens}")
+            print(f"Completion Tokens: {cb.completion_tokens}")
+            print(f"Total Cost (USD): ${cb.total_cost}")
+    else:
+        print("Vibe check failed.(moderation=False)")
 
-print("Title: ",x["title"])
-print("Synopsis: ",x["synopsis"])
-print("Text Description: ",x["text_description"])
-print("Image Description: ",x["image_description"])
-
-
-
+    print("Title: \n",x["title"])
+    print("Synopsis: \n",x["synopsis"])
+    print("Text Description: \n",x["text_description"])
+    print("Image Description: \n",x["image_description"])
 
 
+if __name__ == "__main__":
+    start_time = time.time()
+    main()
+    end_time = time.time()
 
-
-
-
-
-
-# fast api
-# app = FastAPI()
-
-# @app.get("/get_storybook/")
-# async def get_storybook(users_book_description: str):
-#     user_content_2 = PARTIAL_USER_CONTENT_2 + f"{users_book_description}\""
-#     output = get_openai_response_combined(user_content_2)
-#     return {"result": output}
+    elapsed_time = end_time - start_time
+    print(f"Execution time: {elapsed_time:.2f} seconds")
