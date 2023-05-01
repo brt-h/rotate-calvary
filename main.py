@@ -26,10 +26,9 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 openai.api_key = OPENAI_API_KEY
 
 
-llm = OpenAI(model_name="text-davinci-003",temperature=.7) # costs about ~$0.045 per run, seems to work consistently
-# llm = ChatOpenAI(model_name="gpt-3.5-turbo",temperature=.7) # costs about ~$0.005 per run, seems prone to formatting errors, might be slower as well
-# llm = ChatOpenAI(model_name="gpt-4", temperature=.7, request_timeout=120) # costs about ~$0.155 per run, seems higher quality, might be slowest
-
+# llm = OpenAI(model="text-davinci-003",temperature=.7) # costs about ~$0.045 per run, seems to work consistently
+# llm = ChatOpenAI(model="gpt-3.5-turbo",temperature=.7) # costs about ~$0.005 per run, seems pront to formatting errors, might be slower as well
+llm = ChatOpenAI(model_name="gpt-4", temperature=.7, request_timeout=120) # costs about ~$0.065 per run, seems higher quality, might be slowest
 
 # This is an LLMChain to create a title given a scentence/topic.
 template = """You are a creative picture book writer. Given a sentence/topic, it is your job to create a title suitable for a picture book.
