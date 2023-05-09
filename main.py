@@ -1,4 +1,4 @@
-# TODO: add langchain parser, integrate generate_illustration.py, and integrate fastapi
+# TODO: finish integrating generate_illustration.py, integrate fastapi, improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts
 
 # Some dependancies:
 # !pip install python-dotenv
