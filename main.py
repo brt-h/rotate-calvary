@@ -134,17 +134,20 @@ def main():
     print("Synopsis:",x["synopsis"],sep='\n')
     print("Text Description:",x["text_description"],sep='\n')
     print("Image Description:",x["image_description"],sep='\n')
+    
     # parse text description
     parsed_text_description = parse_text(x["text_description"])
     print(parsed_text_description)
+    
     # parse image description
     parsed_image_description = parse_text(x["image_description"])
     print(parsed_image_description)
+    illustrations = []
     for page in parsed_image_description:
-        # generate_illustration(page['content'])
-        print(page['content'])
-    image1 = generate_illustration(parsed_image_description[0]['content'])
-    image1.show()
+        image = generate_illustration(page['content'])
+        image.show()
+        illustrations.append(image)
+    print(illustrations)
 
 if __name__ == "__main__":
     start_time = time.time()
