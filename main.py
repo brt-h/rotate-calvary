@@ -12,6 +12,7 @@ import os
 import openai
 import json
 import re
+from generate_illustration import generate_illustration
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from langchain.llms import OpenAI # was used for old known good but expensive model
@@ -135,13 +136,15 @@ def main():
     print("Image Description:",x["image_description"],sep='\n')
     # parse text description
     parsed_text_description = parse_text(x["text_description"])
-    json_object = json.dumps(parsed_text_description, indent=2)
-    print("text_json_object",json_object,sep='\n')
+    print(parsed_text_description)
     # parse image description
     parsed_image_description = parse_text(x["image_description"])
-    json_object = json.dumps(parsed_image_description, indent=2)
-    print("image_json_object",json_object,sep='\n')
-
+    print(parsed_image_description)
+    for page in parsed_image_description:
+        # generate_illustration(page['content'])
+        print(page['content'])
+    image1 = generate_illustration(parsed_image_description[0]['content'])
+    image1.show()
 
 if __name__ == "__main__":
     start_time = time.time()

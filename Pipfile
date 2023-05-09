@@ -9,6 +9,7 @@ python-dotenv = "*"
 openai = "*"
 uvicorn = "*"
 langchain = "*"
+pillow = "*"
 
 [dev-packages]
 
