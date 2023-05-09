@@ -9,9 +9,11 @@
 
 import time
 import os
+import openai
+import json
+import re
 from dotenv import load_dotenv
 from fastapi import FastAPI
-import openai # gpt-3.5-turbo-0301
 from langchain.llms import OpenAI # was used for old known good but expensive model
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain
@@ -26,9 +28,9 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 openai.api_key = OPENAI_API_KEY
 
 
-# llm = OpenAI(model="text-davinci-003",temperature=.7) # costs about ~$0.045 per run, seems to work consistently
-# llm = ChatOpenAI(model="gpt-3.5-turbo",temperature=.7) # costs about ~$0.005 per run, seems pront to formatting errors, might be slower as well
-llm = ChatOpenAI(model_name="gpt-4", temperature=.7, request_timeout=120) # costs about ~$0.065 per run, seems higher quality, might be slowest
+# llm = OpenAI(model_name="text-davinci-003",temperature=.7) # costs about ~$0.045 per run, seems to output a fraction of the pages asked for
+# llm = ChatOpenAI(model_name="gpt-3.5-turbo",temperature=.7) # costs about ~$0.005 per run, seems prone to formatting errors
+llm = ChatOpenAI(model_name="gpt-4", temperature=.7, request_timeout=240) # costs about ~$0.155 per run, seems higher quality, might be slowest
 
 # This is an LLMChain to create a title given a scentence/topic.
 template = """You are a creative picture book writer. Given a sentence/topic, it is your job to create a title suitable for a picture book.
@@ -101,10 +103,17 @@ total_pages = 20
 
 # @app.get("/get_storybook/")
 # async def get_storybook(users_book_description: str):
-#     user_content_2 = PARTIAL_USER_CONTENT_2 + f"{users_book_description}\""
+#     user_input = PARTIAL_USER_CONTENT_2 + f"{users_book_description}\""
 #     output = get_openai_response_combined(user_content_2)
 #     return {"result": output}
 
+# parse text_description string to Python object 
+def parse_text(input_text):
+    pages = []
+    page_pattern = re.compile(r"Page (\d+):(?:\n)?(.+?)(?=Page \d+:|$)", re.DOTALL)
+    for match in page_pattern.finditer(input_text):
+        pages.append({"page_number": int(match.group(1)), "content": match.group(2).strip()})
+    return pages
 
 def main():
     # Main thread: moderation check, model usage information, call chain with user input
@@ -119,10 +128,19 @@ def main():
     else:
         print("Vibe check failed.(moderation=False)")
 
-    print("Title: \n",x["title"])
-    print("Synopsis: \n",x["synopsis"])
-    print("Text Description: \n",x["text_description"])
-    print("Image Description: \n",x["image_description"])
+    # print OpenAI API outputs
+    print("Title:",x["title"],sep='\n')
+    print("Synopsis:",x["synopsis"],sep='\n')
+    print("Text Description:",x["text_description"],sep='\n')
+    print("Image Description:",x["image_description"],sep='\n')
+    # parse text description
+    parsed_text_description = parse_text(x["text_description"])
+    json_object = json.dumps(parsed_text_description, indent=2)
+    print("text_json_object",json_object,sep='\n')
+    # parse image description
+    parsed_image_description = parse_text(x["image_description"])
+    json_object = json.dumps(parsed_image_description, indent=2)
+    print("image_json_object",json_object,sep='\n')
 
 
 if __name__ == "__main__":
