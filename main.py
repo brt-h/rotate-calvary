@@ -161,16 +161,17 @@ def main(user_input,total_pages):
     final_output['title'] = x["title"] # string
     final_output['parsed_text_description'] = parsed_text_description # list of strings
     final_output['parsed_image_description'] = parsed_image_description # list of strings
-    final_output['illustrations'] = illustrations # list of picture objects
+    final_output['illustrations'] = illustrations # list of strings (base64 encoded images)
     print(final_output)
+    return final_output
 
 app = FastAPI()
 @app.get("/get_storybook/")
 async def get_storybook(desc: str, pgs: int):
     user_input = desc
     total_pages = pgs
-    final_output = main(user_input,total_pages)
-    return final_output
+    result = main(user_input,total_pages)
+    return result
 
 # if __name__ == "__main__":
 #     start_time = time.time()
