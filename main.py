@@ -91,18 +91,9 @@ overall_chain = SequentialChain(
     verbose=True)
 
 # Set user input in prompt used through out
-user_input = "Fire spirit in the shape of a wolf guards the mountain from the humans who come to clear the forest"
+# user_input = "Fire spirit in the shape of a wolf guards the mountain from the humans who come to clear the forest"
 # Set total number of pages in prompt used through out
-total_pages = 5
-
-# fast api
-# app = FastAPI()
-
-# @app.get("/get_storybook/")
-# async def get_storybook(users_book_description: str):
-#     user_input = PARTIAL_USER_CONTENT_2 + f"{users_book_description}\""
-#     output = get_openai_response_combined(user_content_2)
-#     return {"result": output}
+# total_pages = 5
 
 # parse text_description string to Python object 
 def parse_text(input_text):
@@ -112,7 +103,7 @@ def parse_text(input_text):
         pages.append(match.group(2).strip())
     return pages
 
-def main():
+def main(user_input,total_pages):
     # Main thread: moderation check, model usage information, call chain with user input, build final_output object
     
     # moderation check
@@ -157,10 +148,23 @@ def main():
     final_output['illustrations'] = illustrations # list of picture objects
     print(final_output)
 
-if __name__ == "__main__":
-    start_time = time.time()
-    main()
-    end_time = time.time()
+app = FastAPI()
+@app.get("/get_storybook/")
+async def get_storybook(desc: str, pgs: int):
+    user_input = desc
+    total_pages = pgs
+    final_output = main(user_input,total_pages)
+    return final_output
 
-    elapsed_time = end_time - start_time
-    print(f"Execution time: {elapsed_time:.2f} seconds")
+# if __name__ == "__main__":
+#     start_time = time.time()
+#     # fast api
+#     @app.get("/get_storybook/")
+#     async def get_storybook(desc: str, pgs: int):
+#         user_input = desc
+#         total_pages = pgs
+#         final_output = main(user_input,total_pages)
+#         return {"result": final_output}
+#     end_time = time.time()
+#     elapsed_time = end_time - start_time
+#     print(f"Execution time: {elapsed_time:.2f} seconds")
