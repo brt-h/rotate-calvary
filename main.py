@@ -1,4 +1,4 @@
-# TODO: finish integrating generate_illustration.py, integrate fastapi, improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts, add logic to check if length of list is equal to total pages
+# TODO: improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts, add logic to check if length of list is equal to total pages, refactor to streaming output
 
 # Some dependancies:
 # !pip install python-dotenv
@@ -12,6 +12,7 @@ import os
 import openai
 import json
 import re
+import base64
 from generate_illustration import generate_illustration
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -22,6 +23,13 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import SequentialChain
 from langchain.callbacks import get_openai_callback
 from langchain.chains import OpenAIModerationChain
+from io import BytesIO
+
+def image_to_base64(image):
+    buffered = BytesIO()
+    image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue())
+    return img_str.decode('utf-8')
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
@@ -103,6 +111,14 @@ def parse_text(input_text):
         pages.append(match.group(2).strip())
     return pages
 
+#  convert images to serializable format. 
+def image_to_base64(image):
+    buffered = BytesIO()
+    image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue())
+    return img_str.decode('utf-8')
+
+
 def main(user_input,total_pages):
     # Main thread: moderation check, model usage information, call chain with user input, build final_output object
     
@@ -135,8 +151,8 @@ def main(user_input,total_pages):
     for page in parsed_image_description:
         image = generate_illustration(page)
         # image.show()
-        illustrations.append(image)
-    # print(illustrations)
+        base64image = image_to_base64(image)
+        illustrations.append(base64image)
 
     # build final_ouput object for API endpoint
     final_output = {}
