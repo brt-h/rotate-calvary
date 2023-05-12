@@ -1,4 +1,4 @@
-# TODO: finish integrating generate_illustration.py, integrate fastapi, improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts
+# TODO: finish integrating generate_illustration.py, integrate fastapi, improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts, add logic to check if length of list is equal to total pages
 
 # Some dependancies:
 # !pip install python-dotenv
@@ -23,11 +23,9 @@ from langchain.chains import SequentialChain
 from langchain.callbacks import get_openai_callback
 from langchain.chains import OpenAIModerationChain
 
-
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 openai.api_key = OPENAI_API_KEY
-
 
 # llm = OpenAI(model_name="text-davinci-003",temperature=.7) # costs about ~$0.045 per run, seems to output a fraction of the pages asked for
 # llm = ChatOpenAI(model_name="gpt-3.5-turbo",temperature=.7) # costs about ~$0.005 per run, seems prone to formatting errors
@@ -97,8 +95,6 @@ user_input = "Fire spirit in the shape of a wolf guards the mountain from the hu
 # Set total number of pages in prompt used through out
 total_pages = 20
 
-
-
 # fast api
 # app = FastAPI()
 
@@ -113,11 +109,13 @@ def parse_text(input_text):
     pages = []
     page_pattern = re.compile(r"Page (\d+):(?:\n)?(.+?)(?=Page \d+:|$)", re.DOTALL)
     for match in page_pattern.finditer(input_text):
-        pages.append({"page_number": int(match.group(1)), "content": match.group(2).strip()})
+        pages.append(match.group(2).strip())
     return pages
 
 def main():
-    # Main thread: moderation check, model usage information, call chain with user input
+    # Main thread: moderation check, model usage information, call chain with user input, build final_output object
+    
+    # moderation check
     if OpenAIModerationChain(error=True).run(user_input):
         print("Vibe check passed.(moderation=True)")
         with get_openai_callback() as cb:
@@ -130,24 +128,34 @@ def main():
         print("Vibe check failed.(moderation=False)")
 
     # print OpenAI API outputs
-    print("Title:",x["title"],sep='\n')
-    print("Synopsis:",x["synopsis"],sep='\n')
-    print("Text Description:",x["text_description"],sep='\n')
-    print("Image Description:",x["image_description"],sep='\n')
+    # print("Title:",x["title"],sep='\n')
+    # print("Synopsis:",x["synopsis"],sep='\n')
+    # print("Text Description:",x["text_description"],sep='\n')
+    # print("Image Description:",x["image_description"],sep='\n')
     
     # parse text description
     parsed_text_description = parse_text(x["text_description"])
-    print(parsed_text_description)
+    # print(parsed_text_description)
     
     # parse image description
     parsed_image_description = parse_text(x["image_description"])
-    print(parsed_image_description)
+    # print(parsed_image_description)
     illustrations = []
     for page in parsed_image_description:
-        image = generate_illustration(page['content'])
-        image.show()
+        image = generate_illustration(page)
+        # image.show()
         illustrations.append(image)
-    print(illustrations)
+    # print(illustrations)
+
+    # build final_ouput object for API endpoint
+    final_output = {}
+    final_output['user_input'] = user_input # string
+    final_output['total_pages'] = total_pages # int
+    final_output['title'] = x["title"] # string
+    final_output['parsed_text_description'] = parsed_text_description # list of strings
+    final_output['parsed_image_description'] = parsed_image_description # list of strings
+    final_output['illustrations'] = illustrations # list of picture objects
+    print(final_output)
 
 if __name__ == "__main__":
     start_time = time.time()
