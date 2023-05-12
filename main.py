@@ -93,7 +93,7 @@ overall_chain = SequentialChain(
 # Set user input in prompt used through out
 user_input = "Fire spirit in the shape of a wolf guards the mountain from the humans who come to clear the forest"
 # Set total number of pages in prompt used through out
-total_pages = 20
+total_pages = 5
 
 # fast api
 # app = FastAPI()
