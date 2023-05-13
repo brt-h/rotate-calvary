@@ -10,6 +10,7 @@ openai = "*"
 uvicorn = "*"
 langchain = "*"
 pillow = "*"
+streamlit = "*"
 
 [dev-packages]
 

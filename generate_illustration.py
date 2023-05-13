@@ -1,3 +1,6 @@
+# TODO consider: Each image can be returned as either a URL or Base64 data, 
+# using the response_format parameter. URLs will expire after an hour.
+
 import openai
 import requests
 import os

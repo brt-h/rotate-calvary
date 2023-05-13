@@ -167,8 +167,8 @@ def main(user_input,total_pages):
 
 app = FastAPI()
 @app.get("/get_storybook/")
-async def get_storybook(desc: str, pgs: int):
-    user_input = desc
+async def get_storybook(des: str, pgs: int):
+    user_input = des
     total_pages = pgs
     result = main(user_input,total_pages)
     return result
@@ -177,8 +177,8 @@ async def get_storybook(desc: str, pgs: int):
 #     start_time = time.time()
 #     # fast api
 #     @app.get("/get_storybook/")
-#     async def get_storybook(desc: str, pgs: int):
-#         user_input = desc
+#     async def get_storybook(des: str, pgs: int):
+#         user_input = des
 #         total_pages = pgs
 #         final_output = main(user_input,total_pages)
 #         return {"result": final_output}
