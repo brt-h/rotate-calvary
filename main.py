@@ -48,26 +48,16 @@ Writer: This is a title for the above sentence/topic:"""
 prompt_template = PromptTemplate(input_variables=["user_input"], template=template)
 title_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="title")
 
-# This is an LLMChain to write an synopsis of a picture book given a title and user input.
-template = """You are a creative picture book writer. Given the title of the {total_pages} page picture book and the sentence/topic on which it's title is based, it is your job to write a synopsis for the picture book.
+# This is an LLMChain to write the text descriptions of a picture book given title and user_input.
+template = """You are a creative picture book writer. Given the title and the provided sentence/topic of the {total_pages} page picture book, it is your job to write the text that should appear on each of the {total_pages} pages.
 
 Title: {title}
 Sentence/topic: {user_input}
-Synopsis from a creative picture book writer of the above picture book:"""
-prompt_template = PromptTemplate(input_variables=["total_pages","title","user_input"], template=template)
-synopsis_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="synopsis")
-
-# This is an LLMChain to write the text descriptions of a picture book given title and synopsis.
-template = """You are a creative picture book writer. Given the title and synopsis of the {total_pages} page picture book, it is your job to write the text that should appear on each of the {total_pages} pages.
-
-Title: {title}
-Synopsis:
-{synopsis}
 Text for each of the {total_pages} pages from a creative picture book writer for the above picture book:"""
-prompt_template = PromptTemplate(input_variables=["total_pages","title","synopsis"], template=template)
+prompt_template = PromptTemplate(input_variables=["total_pages","title","user_input"], template=template)
 text_description_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="text_description")
 
-# This is an LLMChain to write the image descriptions of a picture book given title and synopsis.
+# This is an LLMChain to write the image descriptions of a picture book given title and user_input.
 template = """You are an expert at creating input prompts for text-to-image neural networks. The system accepts as correct the query string, where all arguments are separated by commas.
 The words in prompt are crucial. Users need to prompt what they want to see, specifying artist names, media sources, or art styles to get desired results. Be descriptive in a manne similar to prompts provided below about what you want. It is more sensitive to precise wording. That includes adjectives and prepositions like “in front of [x]“, and “taken by [camera name]“.
 It also supports weights. By bracketing the words you can change their importance. For example, (rainy) would be twice as important compared to "rainy" for the model, and [rainy] would be half as important.
@@ -94,9 +84,9 @@ image_description_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="
 
 # This is the overall chain where we run these three chains in sequence.
 overall_chain = SequentialChain(
-    chains=[title_chain, synopsis_chain, text_description_chain, image_description_chain],
+    chains=[title_chain, text_description_chain, image_description_chain],
     input_variables=["total_pages","user_input"],
-    output_variables=["title","synopsis","text_description","image_description"],
+    output_variables=["title","text_description","image_description"],
     verbose=True)
 
 # Set user input in prompt used through out
@@ -124,6 +114,7 @@ def main(user_input,total_pages):
     # Main thread: moderation check, model usage information, call chain with user input, build final_output object
     
     # moderation check
+    start_time = time.time()
     if OpenAIModerationChain(error=True).run(user_input):
         print("Vibe check passed.(moderation=True)")
         with get_openai_callback() as cb:
@@ -134,10 +125,12 @@ def main(user_input,total_pages):
             print(f"Total Cost (USD): ${cb.total_cost}")
     else:
         print("Vibe check failed.(moderation=False)")
-
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Execution time: {elapsed_time:.2f} seconds")
+    
     # print OpenAI API outputs
     # print("Title:",x["title"],sep='\n')
-    # print("Synopsis:",x["synopsis"],sep='\n')
     # print("Text Description:",x["text_description"],sep='\n')
     # print("Image Description:",x["image_description"],sep='\n')
     
