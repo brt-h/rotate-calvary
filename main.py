@@ -1,4 +1,4 @@
-# TODO: improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts, add logic to check if length of list is equal to total pages, refactor to streaming output
+# TODO: improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts, add logic to check if length of list is equal to total pages, refactor to streaming output, make a title image with text rastered on top, refactor to chunk or stream or otherwise improve response time, image consistency efforts, pdf export (front end), save recently created stories (frontend, while waiting), fix the 'we solved lots of puzzles' writing style
 
 # Some dependancies:
 # !pip install python-dotenv

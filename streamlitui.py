@@ -61,3 +61,5 @@ if st.button('Generate'):
             # display
             st.write(f'Page {i+1}:  \n{page_text}')
             st.image(image, caption=caption)
+
+        st.write('The end.')
