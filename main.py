@@ -16,6 +16,7 @@ import base64
 from generate_illustration import generate_illustration
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from langchain.llms import OpenAI # was used for old known good but expensive model
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain
@@ -166,6 +167,18 @@ def main(user_input,total_pages):
     return final_output
 
 app = FastAPI()
+origins = [
+    "http://localhost:3000",  # React app
+    "http://localhost:4000",  # FastAPI server (change if different)
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 @app.get("/get_storybook/")
 async def get_storybook(des: str, pgs: int):
     user_input = des
