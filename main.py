@@ -112,7 +112,7 @@ def image_to_base64(image):
 
 def main(user_input,total_pages):
     # Main thread: moderation check, model usage information, call chain with user input, build final_output object
-    
+    print("Reached the beginning of main()")
     # moderation check
     start_time = time.time()
     if OpenAIModerationChain(error=True).run(user_input):
