@@ -162,7 +162,8 @@ def main(user_input,total_pages):
 app = FastAPI()
 origins = [
     "http://localhost:3000",  # React app
-    "http://localhost:4000",  # FastAPI server (change if different)
+    "http://localhost:8080",  # FastAPI server (change if different)
+    "https://rotate-calvary.fly.dev"
 ]
 
 app.add_middleware(
