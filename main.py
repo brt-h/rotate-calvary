@@ -16,7 +16,7 @@ import base64
 from generate_illustration import generate_illustration
 from dotenv import load_dotenv
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+# from fastapi.middleware.cors import CORSMiddleware
 from langchain.llms import OpenAI # was used for old known good but expensive model
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain
@@ -82,12 +82,12 @@ Text-to-image neural network input prompts for each of the {total_pages} pages f
 prompt_template = PromptTemplate(input_variables=["total_pages","title","text_description"], template=template)
 image_description_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="image_description")
 
-# This is the overall chain where we run these three chains in sequence.
-overall_chain = SequentialChain(
-    chains=[title_chain, text_description_chain, image_description_chain],
-    input_variables=["total_pages","user_input"],
-    output_variables=["title","text_description","image_description"],
-    verbose=True)
+# DEPRICATED This is the overall chain where we run these three chains in sequence.
+# overall_chain = SequentialChain(
+#     chains=[title_chain, text_description_chain, image_description_chain],
+#     input_variables=["total_pages","user_input"],
+#     output_variables=["title","text_description","image_description"],
+#     verbose=True)
 
 # Set user input in prompt used through out
 # user_input = "Fire spirit in the shape of a wolf guards the mountain from the humans who come to clear the forest"
@@ -118,7 +118,10 @@ def main(user_input,total_pages):
     if OpenAIModerationChain(error=True).run(user_input):
         print("Vibe check passed.(moderation=True)")
         with get_openai_callback() as cb:
-            x = overall_chain({"total_pages":total_pages,"user_input":user_input})
+            title = title_chain({"user_input":user_input})
+            text_description = text_description_chain({"total_pages":total_pages,"title":title,"user_input":user_input})
+            image_description = image_description_chain({"total_pages":total_pages,"title":title,"text_description":text_description})
+            # x = overall_chain({"total_pages":total_pages,"user_input":user_input}) # DEPRICATED
             print(f"Total Tokens: {cb.total_tokens}")
             print(f"Prompt Tokens: {cb.prompt_tokens}")
             print(f"Completion Tokens: {cb.completion_tokens}")
@@ -135,11 +138,11 @@ def main(user_input,total_pages):
     # print("Image Description:",x["image_description"],sep='\n')
     
     # parse text description
-    parsed_text_description = parse_text(x["text_description"])
+    parsed_text_description = parse_text(text_description['text_description'])
     # print(parsed_text_description)
     
     # parse image description
-    parsed_image_description = parse_text(x["image_description"])
+    parsed_image_description = parse_text(image_description['image_description'])
     # print(parsed_image_description)
     illustrations = []
     for page in parsed_image_description:
@@ -152,7 +155,7 @@ def main(user_input,total_pages):
     final_output = {}
     final_output['user_input'] = user_input # string
     final_output['total_pages'] = total_pages # int
-    final_output['title'] = x["title"] # string
+    final_output['title'] = title['title'] # string
     final_output['parsed_text_description'] = parsed_text_description # list of strings
     final_output['parsed_image_description'] = parsed_image_description # list of strings
     final_output['illustrations'] = illustrations # list of strings (base64 encoded images)

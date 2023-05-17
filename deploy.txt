@@ -1,6 +1,6 @@
 docker build -t rotatecalvary1 .
-docker run -p 8080:80 --env-file .flyenv rotatecalvary1
-localhost:8080/get_storybook/?des=SuperSaltySoldiers&pgs=5
+docker run -p 4000:80 --env-file .env rotatecalvary1
+localhost:4000/get_storybook/?des=SuperSaltySoldiers&pgs=5
 streamlit run streamlitui.py
 
 or
