@@ -160,35 +160,28 @@ def main(user_input,total_pages):
     return final_output
 
 app = FastAPI()
-origins = [
-    "http://localhost:3000",  # React app
-    "http://localhost:8080",  # FastAPI server (change if different)
-    "https://rotate-calvary.fly.dev"
-]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# origins = [
+#     "http://localhost:3000",  # React app
+#     "http://localhost:8080",  # FastAPI server (change if different)
+#     "https://rotate-calvary.fly.dev"
+# ]
+
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=origins,
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+@app.get("/")
+async def health_check():
+    return {"status": "healthy"}
+
 @app.get("/get_storybook/")
 async def get_storybook(des: str, pgs: int):
     user_input = des
     total_pages = pgs
     result = main(user_input,total_pages)
     return result
-
-# if __name__ == "__main__":
-#     start_time = time.time()
-#     # fast api
-#     @app.get("/get_storybook/")
-#     async def get_storybook(des: str, pgs: int):
-#         user_input = des
-#         total_pages = pgs
-#         final_output = main(user_input,total_pages)
-#         return {"result": final_output}
-#     end_time = time.time()
-#     elapsed_time = end_time - start_time
-#     print(f"Execution time: {elapsed_time:.2f} seconds")
