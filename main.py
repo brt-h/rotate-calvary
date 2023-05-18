@@ -228,7 +228,7 @@ def generate_storybook(task_id, user_input, total_pages):
         print("Vibe check failed.(moderation=False)")
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Execution time: {elapsed_time:.2f} seconds")
+    print(f"Text execution time: {elapsed_time:.2f} seconds")
 
     # parse text description
     parsed_text_description = parse_text(text_description['text_description'])
@@ -236,6 +236,7 @@ def generate_storybook(task_id, user_input, total_pages):
     # parse image description
     parsed_image_description = parse_text(image_description['image_description'])
 
+    start_time = time.time()
     illustrations = []
     for page in parsed_image_description:
         image = generate_illustration(page)
@@ -254,6 +255,9 @@ def generate_storybook(task_id, user_input, total_pages):
                 'illustrations': illustrations
             }
         })
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"image execution time: {elapsed_time:.2f} seconds")
 
     # build final_ouput object for API endpoint
     final_output = {}
