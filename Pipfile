@@ -11,6 +11,8 @@ uvicorn = "*"
 langchain = "*"
 pillow = "*"
 streamlit = "*"
+sse-starlette = "*"
+sseclient = "*"
 
 [dev-packages]
 

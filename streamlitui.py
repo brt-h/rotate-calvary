@@ -2,13 +2,14 @@
 # with open( './example_output.json', 'r') as read_file:
 #     res = json.load(read_file)
 
-
 import requests
 import streamlit as st
 import json
 from PIL import Image
 import base64
 from io import BytesIO
+import time
+from sseclient import SSEClient
 
 # converts base64 string into an image
 def base64_to_image(base64_string):
@@ -36,30 +37,62 @@ if st.button('Generate'):
     if des is not None and pgs is not None:
         st.write('Generating...')
 
-        # call backend
+        # Create a new task and get the task ID
         response = requests.get(f"http://localhost:4000/get_storybook/?des={des}&pgs={pgs}")
-        res = response.json()
+        print(response.text)
+        task_id = response.json()["task_id"]
+        
+        # Connect to the update stream
+        messages = SSEClient(f"http://localhost:4000/get_updates/{task_id}")
 
-        # not used
-        # user_input = res['user_input']
-        # total_pages = res['total_pages']
+        # Process updates as they arrive
+        for msg in messages:
+            print(msg.data)
+            if msg.data:
+                data = json.loads(msg.data)
 
-        title = res['title']
-        st.write(f'Title: {title}')
+            # Check if the task is done
+            if data['status'] == 'done':
+                # Get the final output
+                final_output = data['final_output']
 
-        # Get the length of the parsed_text_description list
-        n = len(res['parsed_text_description'])
+                title = final_output['title']
+                st.write(f'Title: {title}')
 
-        # Loop through to write each page
-        for i in range(n):
-            
-            # assign
-            page_text = res['parsed_text_description'][i]
-            caption = res['parsed_image_description'][i]
-            image = base64_to_image(res['illustrations'][i])
+                # Get the length of the parsed_text_description list
+                n = len(final_output['parsed_text_description'])
 
-            # display
-            st.write(f'Page {i+1}:  \n{page_text}')
-            st.image(image, caption=caption)
+                # Loop through to write each page
+                for i in range(n):
 
-        st.write('The end.')
+                    # assign
+                    page_text = final_output['parsed_text_description'][i]
+                    caption = final_output['parsed_image_description'][i]
+                    image = base64_to_image(final_output['illustrations'][i])
+
+                    # display
+                    st.write(f'Page {i+1}:  \n{page_text}')
+                    st.image(image, caption=caption)
+
+                # Exit the loop when the task is done
+                break
+            else:
+                # Update the frontend with the latest available data
+                if 'final_output' in data:
+                    title = data['final_output']['title']
+                    st.write(f'Title: {title}')
+
+                    # Get the length of the parsed_text_description list
+                    n = len(data['final_output']['parsed_text_description'])
+
+                    # Loop through to write each page
+                    for i in range(n):
+
+                        # assign
+                        page_text = data['final_output']['parsed_text_description'][i]
+                        caption = data['final_output']['parsed_image_description'][i]
+                        image = base64_to_image(data['final_output']['illustrations'][i])
+
+                        # display
+                        st.write(f'Page {i+1}:  \n{page_text}')
+                        st.image(image, caption=caption)
