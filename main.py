@@ -116,13 +116,6 @@ def image_to_base64(image):
 #     allow_headers=["*"],
 # )
 
-# @app.get("/get_storybook/")
-# async def get_storybook(des: str, pgs: int):
-#     user_input = des
-#     total_pages = pgs
-#     result = main(user_input,total_pages)
-#     return result
-
 app = FastAPI()
 
 # Store updates for each task
@@ -166,7 +159,7 @@ async def generate_events(updates):
             yield "data: {}\n\n".format(json.dumps(update))
         else:
             # If there are no updates, yield a keep alive comment
-            yield "comment: keep alive\n\n"
+            yield ": keep alive\n\n" #  in the context of Server-Sent Events (SSE), a comment is defined as a line starting with :
 
 # Moderation check, model usage information, call chain with user input, build final_output object
 def generate_storybook(task_id, user_input, total_pages):
@@ -278,8 +271,8 @@ def generate_storybook(task_id, user_input, total_pages):
     })
 
     # Don't forget to remove the task from tasks when it's done
-    with lock:
-        del tasks[task_id]
+    # with lock:
+    #     del tasks[task_id]
 
     print(final_output)
     return final_output
