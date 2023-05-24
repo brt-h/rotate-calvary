@@ -164,7 +164,7 @@ async def generate_events(updates):
 # Moderation check, model usage information, call chain with user input, build final_output object
 def generate_storybook(task_id, user_input, total_pages):
     # Generate the storybook here
-    # Call updates.put whenever you want to send an update to the client
+    # Call tasks.put whenever you want to send an update to the client
     tasks[task_id].put({
         'status': 'working',
         'progress': {
