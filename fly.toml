@@ -18,7 +18,6 @@ processes = []
 
 [[services]]
   internal_port = 8080
-  processes = ["main:app"]
   protocol = "tcp"
   [services.concurrency]
     hard_limit = 25
