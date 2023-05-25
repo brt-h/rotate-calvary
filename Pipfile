@@ -9,10 +9,9 @@ python-dotenv = "*"
 openai = "*"
 uvicorn = "*"
 langchain = "*"
-pillow = "*"
-streamlit = "*"
 sse-starlette = "*"
 sseclient = "*"
+pillow = "*"
 
 [dev-packages]
 
