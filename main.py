@@ -127,6 +127,12 @@ app.add_middleware(
 async def health_check():
     return {"status": "healthy"}
 
+final_output = {}
+
+@app.get("/get_final_output")
+async def health_check():
+    return {"final_output": final_output}
+
 @app.get("/get_storybook/")
 async def get_storybook(background_tasks: BackgroundTasks, des: str, pgs: int):
     user_input = des
@@ -236,12 +242,12 @@ def generate_storybook(task_id, user_input, total_pages):
 
     start_time = time.time()
     illustrations = []
-    # TODO TODO TODO use pass the download url instead of image itself, debatably better and might fix SSE bug
-    # altertnatively, use a different endpoint to retrieve each image and just point to it on the SSE response
+    # TODO make additional endpoint for base64 converted images?
     for page in parsed_image_description:
         image = generate_illustration(page)
-        base64image = image_to_base64(image)
-        illustrations.append(base64image)
+        illustrations.append(image)
+        # base64image = image_to_base64(image)
+        # illustrations.append(base64image)
         tasks[task_id].put({
             'status': 'working',
             'progress': {
@@ -260,7 +266,6 @@ def generate_storybook(task_id, user_input, total_pages):
     print(f"image execution time: {elapsed_time:.2f} seconds")
 
     # build final_ouput object for API endpoint
-    final_output = {}
     final_output['user_input'] = user_input # string
     final_output['total_pages'] = total_pages # int
     final_output['title'] = title['title'] # string
