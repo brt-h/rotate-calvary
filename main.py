@@ -127,6 +127,12 @@ app.add_middleware(
 async def health_check():
     return {"status": "healthy"}
 
+final_output = {}
+
+@app.get("/get_final_output")
+async def health_check():
+    return {"final_output": final_output}
+
 @app.get("/get_storybook/")
 async def get_storybook(background_tasks: BackgroundTasks, des: str, pgs: int):
     user_input = des
@@ -260,7 +266,6 @@ def generate_storybook(task_id, user_input, total_pages):
     print(f"image execution time: {elapsed_time:.2f} seconds")
 
     # build final_ouput object for API endpoint
-    final_output = {}
     final_output['user_input'] = user_input # string
     final_output['total_pages'] = total_pages # int
     final_output['title'] = title['title'] # string
