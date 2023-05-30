@@ -1,4 +1,4 @@
-# TODO: improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts, add logic to check if length of list is equal to total pages, refactor to streaming output, make a title image with text rastered on top, refactor to chunk or stream or otherwise improve response time, image consistency efforts, pdf export (front end), save recently created stories (frontend, while waiting), fix the 'we solved lots of puzzles' writing style
+# TODO: improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts, add logic to check if length of list is equal to total pages, make a title image with text rastered on top, refactor to stream or otherwise improve response time, image consistency efforts, pdf export (front end), save recently created stories (frontend, while waiting), add option to select model tempterature
 
 # Some dependancies:
 # !pip install python-dotenv
@@ -16,7 +16,7 @@ import base64
 from generate_illustration import generate_illustration
 from dotenv import load_dotenv
 from fastapi import FastAPI
-# from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from langchain.llms import OpenAI # was used for old known good but expensive model
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain
@@ -102,26 +102,26 @@ def image_to_base64(image):
     img_str = base64.b64encode(buffered.getvalue())
     return img_str.decode('utf-8')
 
-# origins = [
-#     "http://localhost:3000",  # React app
-#     "http://localhost:8080",  # FastAPI server (change if different)
-#     "https://rotate-calvary.fly.dev"
-# ]
-
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=origins,
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
 app = FastAPI()
 
 # Store updates for each task
 tasks = {}
 # A lock to make sure updates to tasks are thread safe
 lock = Lock()
+
+origins = [
+    "http://localhost:3000",  # React app
+    "http://localhost:8080",  # FastAPI server (change if different)
+    "https://rotate-calvary.fly.dev"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 async def health_check():
@@ -156,7 +156,12 @@ async def generate_events(updates):
         if updates.qsize() > 0:
             # If there are updates, yield them as server sent events
             update = updates.get()
-            yield "data: {}\n\n".format(json.dumps(update))
+            # print(json.dumps(update))
+            yield "{}\n\n".format(json.dumps(update))
+            # If status is 'done', break the loop
+            if update.get('status') == 'done':
+                print("status = done, break point reached")
+                break
         else:
             # If there are no updates, yield a keep alive comment
             yield ": keep alive\n\n" #  in the context of Server-Sent Events (SSE), a comment is defined as a line starting with :
@@ -231,6 +236,8 @@ def generate_storybook(task_id, user_input, total_pages):
 
     start_time = time.time()
     illustrations = []
+    # TODO TODO TODO use pass the download url instead of image itself, debatably better and might fix SSE bug
+    # altertnatively, use a different endpoint to retrieve each image and just point to it on the SSE response
     for page in parsed_image_description:
         image = generate_illustration(page)
         base64image = image_to_base64(image)
@@ -273,6 +280,7 @@ def generate_storybook(task_id, user_input, total_pages):
     # Don't forget to remove the task from tasks when it's done
     # with lock:
     #     del tasks[task_id]
+    # TODO delete storybook after x period of time
 
-    print(final_output)
+    # print(final_output)
     return final_output
