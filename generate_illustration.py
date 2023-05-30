@@ -25,11 +25,7 @@ def generate_illustration(prompt):
 
     if response.status_code == 200:
         image_url = response.json()["data"][0]["url"]
-        image_response = requests.get(image_url)
-        
-        # Load the image using PIL.Image and BytesIO
-        image = Image.open(BytesIO(image_response.content))
-        return image
+        return image_url
     else:
         print(f"Error generating image: {response.status_code}, {response.text}")
         return None

@@ -242,12 +242,12 @@ def generate_storybook(task_id, user_input, total_pages):
 
     start_time = time.time()
     illustrations = []
-    # TODO TODO TODO use pass the download url instead of image itself, debatably better and might fix SSE bug
-    # altertnatively, use a different endpoint to retrieve each image and just point to it on the SSE response
+    # TODO make additional endpoint for base64 converted images?
     for page in parsed_image_description:
         image = generate_illustration(page)
-        base64image = image_to_base64(image)
-        illustrations.append(base64image)
+        illustrations.append(image)
+        # base64image = image_to_base64(image)
+        # illustrations.append(base64image)
         tasks[task_id].put({
             'status': 'working',
             'progress': {
