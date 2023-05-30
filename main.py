@@ -1,4 +1,4 @@
-# TODO: improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts, add logic to check if length of list is equal to total pages, refactor to streaming output, make a title image with text rastered on top, refactor to chunk or stream or otherwise improve response time, image consistency efforts, pdf export (front end), save recently created stories (frontend, while waiting), fix the 'we solved lots of puzzles' writing style
+# TODO: improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts, add logic to check if length of list is equal to total pages, make a title image with text rastered on top, refactor to stream or otherwise improve response time, image consistency efforts, pdf export (front end), save recently created stories (frontend, while waiting), add option to select model tempterature
 
 # Some dependancies:
 # !pip install python-dotenv
@@ -25,12 +25,10 @@ from langchain.chains import SequentialChain
 from langchain.callbacks import get_openai_callback
 from langchain.chains import OpenAIModerationChain
 from io import BytesIO
-
-def image_to_base64(image):
-    buffered = BytesIO()
-    image.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue())
-    return img_str.decode('utf-8')
+from fastapi import FastAPI, BackgroundTasks
+from sse_starlette.sse import EventSourceResponse
+from queue import Queue
+from threading import Lock
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
@@ -82,17 +80,12 @@ Text-to-image neural network input prompts for each of the {total_pages} pages f
 prompt_template = PromptTemplate(input_variables=["total_pages","title","text_description"], template=template)
 image_description_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="image_description")
 
-# This is the overall chain where we run these three chains in sequence.
-overall_chain = SequentialChain(
-    chains=[title_chain, text_description_chain, image_description_chain],
-    input_variables=["total_pages","user_input"],
-    output_variables=["title","text_description","image_description"],
-    verbose=True)
-
-# Set user input in prompt used through out
-# user_input = "Fire spirit in the shape of a wolf guards the mountain from the humans who come to clear the forest"
-# Set total number of pages in prompt used through out
-# total_pages = 5
+# DEPRICATED This is the overall chain where we run these three chains in sequence.
+# overall_chain = SequentialChain(
+#     chains=[title_chain, text_description_chain, image_description_chain],
+#     input_variables=["total_pages","user_input"],
+#     output_variables=["title","text_description","image_description"],
+#     verbose=True)
 
 # parse text_description string to Python object 
 def parse_text(input_text):
@@ -109,16 +102,122 @@ def image_to_base64(image):
     img_str = base64.b64encode(buffered.getvalue())
     return img_str.decode('utf-8')
 
+app = FastAPI()
 
-def main(user_input,total_pages):
-    # Main thread: moderation check, model usage information, call chain with user input, build final_output object
-    print("Reached the beginning of main()")
-    # moderation check
+# Store updates for each task
+tasks = {}
+# A lock to make sure updates to tasks are thread safe
+lock = Lock()
+
+origins = [
+    "http://localhost:3000",  # React app
+    "http://localhost:8080",  # FastAPI server (change if different)
+    "https://rotate-calvary.fly.dev"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/")
+async def health_check():
+    return {"status": "healthy"}
+
+@app.get("/get_storybook/")
+async def get_storybook(background_tasks: BackgroundTasks, des: str, pgs: int):
+    user_input = des
+    total_pages = pgs
+    # Use a queue to store updates for this task
+    updates = Queue()
+    # Use the id of the queue object as the task id
+    task_id = id(updates)
+    with lock:
+        tasks[task_id] = updates
+    # Start the task in the background
+    background_tasks.add_task(generate_storybook, task_id, user_input, total_pages)
+    # Return the task id to the client
+    return {"task_id": task_id}
+
+@app.get("/get_updates/{task_id}")
+async def get_updates(task_id: int):
+    # Get the queue for this task
+    updates = tasks.get(task_id)
+    if updates is None:
+        return {"error": "Invalid task id"}
+    # Return an event stream of updates
+    return EventSourceResponse(generate_events(updates))
+
+async def generate_events(updates):
+    while True:
+        if updates.qsize() > 0:
+            # If there are updates, yield them as server sent events
+            update = updates.get()
+            # print(json.dumps(update))
+            yield "{}\n\n".format(json.dumps(update))
+            # If status is 'done', break the loop
+            if update.get('status') == 'done':
+                print("status = done, break point reached")
+                break
+        else:
+            # If there are no updates, yield a keep alive comment
+            yield ": keep alive\n\n" #  in the context of Server-Sent Events (SSE), a comment is defined as a line starting with :
+
+# Moderation check, model usage information, call chain with user input, build final_output object
+def generate_storybook(task_id, user_input, total_pages):
+    # Generate the storybook here
+    # Call tasks.put whenever you want to send an update to the client
+    tasks[task_id].put({
+        'status': 'working',
+        'progress': {
+            'total': 4,  # total number of steps
+            'current': 0
+        },
+        'data': None
+    })
+    # timer start
     start_time = time.time()
+    # moderation check
     if OpenAIModerationChain(error=True).run(user_input):
         print("Vibe check passed.(moderation=True)")
         with get_openai_callback() as cb:
-            x = overall_chain({"total_pages":total_pages,"user_input":user_input})
+            title = title_chain({"user_input":user_input})
+            tasks[task_id].put({
+                'status': 'working',
+                'progress': {
+                    'total': 4,
+                    'current': 1
+                },
+                'data': {'title': title['title']}
+            })
+            text_description = text_description_chain({"total_pages":total_pages,"title":title,"user_input":user_input})
+            tasks[task_id].put({
+                'status': 'working',
+                'progress': {
+                    'total': 4,
+                    'current': 2
+                },
+                'data': {
+                    'title': title['title'],
+                    'text_description': parse_text(text_description['text_description'])
+                }
+            })
+            image_description = image_description_chain({"total_pages":total_pages,"title":title,"text_description":text_description})
+            tasks[task_id].put({
+                'status': 'working',
+                'progress': {
+                    'total': 4,
+                    'current': 3
+                },
+                'data': {
+                    'title': title['title'],
+                    'text_description': parse_text(text_description['text_description']),
+                    'image_description': parse_text(image_description['image_description'])
+                }
+            })
             print(f"Total Tokens: {cb.total_tokens}")
             print(f"Prompt Tokens: {cb.prompt_tokens}")
             print(f"Completion Tokens: {cb.completion_tokens}")
@@ -127,61 +226,61 @@ def main(user_input,total_pages):
         print("Vibe check failed.(moderation=False)")
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Execution time: {elapsed_time:.2f} seconds")
-    
-    # print OpenAI API outputs
-    # print("Title:",x["title"],sep='\n')
-    # print("Text Description:",x["text_description"],sep='\n')
-    # print("Image Description:",x["image_description"],sep='\n')
-    
+    print(f"Text execution time: {elapsed_time:.2f} seconds")
+
     # parse text description
-    parsed_text_description = parse_text(x["text_description"])
-    # print(parsed_text_description)
-    
+    parsed_text_description = parse_text(text_description['text_description'])
+
     # parse image description
-    parsed_image_description = parse_text(x["image_description"])
-    # print(parsed_image_description)
+    parsed_image_description = parse_text(image_description['image_description'])
+
+    start_time = time.time()
     illustrations = []
+    # TODO TODO TODO use pass the download url instead of image itself, debatably better and might fix SSE bug
+    # altertnatively, use a different endpoint to retrieve each image and just point to it on the SSE response
     for page in parsed_image_description:
         image = generate_illustration(page)
-        # image.show()
         base64image = image_to_base64(image)
         illustrations.append(base64image)
+        tasks[task_id].put({
+            'status': 'working',
+            'progress': {
+                'total': 4,
+                'current': 4
+            },
+            'data': {
+                'title': title['title'],
+                'text_description': parse_text(text_description['text_description']),
+                'image_description': parse_text(image_description['image_description']),
+                'illustrations': illustrations
+            }
+        })
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"image execution time: {elapsed_time:.2f} seconds")
 
     # build final_ouput object for API endpoint
     final_output = {}
     final_output['user_input'] = user_input # string
     final_output['total_pages'] = total_pages # int
-    final_output['title'] = x["title"] # string
+    final_output['title'] = title['title'] # string
     final_output['parsed_text_description'] = parsed_text_description # list of strings
     final_output['parsed_image_description'] = parsed_image_description # list of strings
     final_output['illustrations'] = illustrations # list of strings (base64 encoded images)
-    print(final_output)
+
+    tasks[task_id].put({
+        'status': 'done',
+        'progress': {
+            'total': 4,
+            'current': 4
+        },
+        'data': final_output
+    })
+
+    # Don't forget to remove the task from tasks when it's done
+    # with lock:
+    #     del tasks[task_id]
+    # TODO delete storybook after x period of time
+
+    # print(final_output)
     return final_output
-
-app = FastAPI()
-
-# origins = [
-#     "http://localhost:3000",  # React app
-#     "http://localhost:8080",  # FastAPI server (change if different)
-#     "https://rotate-calvary.fly.dev"
-# ]
-
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=origins,
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-@app.get("/")
-async def health_check():
-    return {"status": "healthy"}
-
-@app.get("/get_storybook/")
-async def get_storybook(des: str, pgs: int):
-    user_input = des
-    total_pages = pgs
-    result = main(user_input,total_pages)
-    return result
