@@ -13,6 +13,7 @@ import openai
 import json
 import re
 import base64
+import asyncio
 from generate_illustration import generate_illustration
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -31,7 +32,10 @@ from queue import Queue
 from threading import Lock
 
 load_dotenv()
+
+STREAM_DELAY = 1  # Delay in seconds
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
 openai.api_key = OPENAI_API_KEY
 
 # llm = OpenAI(model_name="text-davinci-003",temperature=.7) # costs about ~$0.045 per run, seems to output a fraction of the pages asked for
@@ -127,8 +131,6 @@ app.add_middleware(
 async def health_check():
     return {"status": "healthy"}
 
-final_output = {}
-
 @app.get("/get_final_output")
 async def health_check():
     return {"final_output": final_output}
@@ -162,7 +164,6 @@ async def generate_events(updates):
         if updates.qsize() > 0:
             # If there are updates, yield them as server sent events
             update = updates.get()
-            # print(json.dumps(update))
             yield "{}\n\n".format(json.dumps(update))
             # If status is 'done', break the loop
             if update.get('status') == 'done':
@@ -170,11 +171,15 @@ async def generate_events(updates):
                 break
         else:
             # If there are no updates, yield a keep alive comment
-            yield ": keep alive\n\n" #  in the context of Server-Sent Events (SSE), a comment is defined as a line starting with :
+            yield ": keep alive\n\n"
+            await asyncio.sleep(STREAM_DELAY)  # Introduce the delay
 
+final_output = {}
 # Moderation check, model usage information, call chain with user input, build final_output object
 def generate_storybook(task_id, user_input, total_pages):
     # Generate the storybook here
+    parsed_text_description = {}
+    parsed_image_description = {}
     # Call tasks.put whenever you want to send an update to the client
     tasks[task_id].put({
         'status': 'working',
@@ -192,7 +197,7 @@ def generate_storybook(task_id, user_input, total_pages):
         with get_openai_callback() as cb:
             title = title_chain({"user_input":user_input})
             tasks[task_id].put({
-                'status': 'working',
+                'status': 'working -> title',
                 'progress': {
                     'total': 4,
                     'current': 1
@@ -200,29 +205,24 @@ def generate_storybook(task_id, user_input, total_pages):
                 'data': {'title': title['title']}
             })
             text_description = text_description_chain({"total_pages":total_pages,"title":title,"user_input":user_input})
+            parsed_text_description = parse_text(text_description['text_description'])
             tasks[task_id].put({
-                'status': 'working',
+                'status': 'working -> text descriptions',
                 'progress': {
                     'total': 4,
                     'current': 2
                 },
-                'data': {
-                    'title': title['title'],
-                    'text_description': parse_text(text_description['text_description'])
-                }
+                'data': {'text_description': parsed_text_description}
             })
             image_description = image_description_chain({"total_pages":total_pages,"title":title,"text_description":text_description})
+            parsed_image_description = parse_text(image_description['image_description'])
             tasks[task_id].put({
-                'status': 'working',
+                'status': 'working -> image descriptions',
                 'progress': {
                     'total': 4,
                     'current': 3
                 },
-                'data': {
-                    'title': title['title'],
-                    'text_description': parse_text(text_description['text_description']),
-                    'image_description': parse_text(image_description['image_description'])
-                }
+                'data': {'image_description': parsed_image_description}
             })
             print(f"Total Tokens: {cb.total_tokens}")
             print(f"Prompt Tokens: {cb.prompt_tokens}")
@@ -234,31 +234,23 @@ def generate_storybook(task_id, user_input, total_pages):
     elapsed_time = end_time - start_time
     print(f"Text execution time: {elapsed_time:.2f} seconds")
 
-    # parse text description
-    parsed_text_description = parse_text(text_description['text_description'])
-
-    # parse image description
-    parsed_image_description = parse_text(image_description['image_description'])
-
     start_time = time.time()
     illustrations = []
     # TODO make additional endpoint for base64 converted images?
-    for page in parsed_image_description:
+    for index, page in enumerate(parsed_image_description):
         image = generate_illustration(page)
         illustrations.append(image)
         # base64image = image_to_base64(image)
         # illustrations.append(base64image)
         tasks[task_id].put({
-            'status': 'working',
+            'status': f'working -> image {index}',
             'progress': {
                 'total': 4,
                 'current': 4
             },
             'data': {
-                'title': title['title'],
-                'text_description': parse_text(text_description['text_description']),
-                'image_description': parse_text(image_description['image_description']),
-                'illustrations': illustrations
+                'index': index,
+                'illustration': image
             }
         })
     end_time = time.time()
