@@ -13,6 +13,7 @@ import openai
 import json
 import re
 import base64
+import asyncio
 from generate_illustration import generate_illustration
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -31,6 +32,8 @@ from queue import Queue
 from threading import Lock
 
 load_dotenv()
+
+STREAM_DELAY = 1  # Delay in seconds
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 openai.api_key = OPENAI_API_KEY
 
@@ -171,6 +174,7 @@ async def generate_events(updates):
         else:
             # If there are no updates, yield a keep alive comment
             yield ": keep alive\n\n" #  in the context of Server-Sent Events (SSE), a comment is defined as a line starting with :
+            await asyncio.sleep(STREAM_DELAY)
 
 # Moderation check, model usage information, call chain with user input, build final_output object
 def generate_storybook(task_id, user_input, total_pages):
