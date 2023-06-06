@@ -212,7 +212,10 @@ def generate_storybook(task_id, user_input, total_pages):
                     'total': 4,
                     'current': 2
                 },
-                'data': {'text_description': parsed_text_description}
+                'data': {
+                    'title': title['title'],
+                    'text_description': parsed_text_description
+                }
             })
             image_description = image_description_chain({"total_pages":total_pages,"title":title,"text_description":text_description})
             parsed_image_description = parse_text(image_description['image_description'])
@@ -222,7 +225,11 @@ def generate_storybook(task_id, user_input, total_pages):
                     'total': 4,
                     'current': 3
                 },
-                'data': {'image_description': parsed_image_description}
+                'data': {
+                    'title': title['title'],
+                    'text_description': parsed_text_description,
+                    'image_description': parsed_image_description
+                }
             })
             print(f"Total Tokens: {cb.total_tokens}")
             print(f"Prompt Tokens: {cb.prompt_tokens}")
@@ -237,20 +244,22 @@ def generate_storybook(task_id, user_input, total_pages):
     start_time = time.time()
     illustrations = []
     # TODO make additional endpoint for base64 converted images?
-    for index, page in enumerate(parsed_image_description):
+    for page in parsed_image_description:
         image = generate_illustration(page)
         illustrations.append(image)
         # base64image = image_to_base64(image)
         # illustrations.append(base64image)
         tasks[task_id].put({
-            'status': f'working -> image {index}',
+            'status': 'working',
             'progress': {
                 'total': 4,
                 'current': 4
             },
             'data': {
-                'index': index,
-                'illustration': image
+                'title': title['title'],
+                'text_description': parsed_text_description,
+                'image_description': parsed_image_description,
+                'illustrations': illustrations
             }
         })
     end_time = time.time()
