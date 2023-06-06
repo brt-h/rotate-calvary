@@ -269,8 +269,8 @@ def generate_storybook(task_id, user_input, total_pages):
     final_output['user_input'] = user_input # string
     final_output['total_pages'] = total_pages # int
     final_output['title'] = title['title'] # string
-    final_output['parsed_text_description'] = parsed_text_description # list of strings
-    final_output['parsed_image_description'] = parsed_image_description # list of strings
+    final_output['text_description'] = parsed_text_description # list of strings
+    final_output['image_description'] = parsed_image_description # list of strings
     final_output['illustrations'] = illustrations # list of strings (base64 encoded images)
 
     tasks[task_id].put({
