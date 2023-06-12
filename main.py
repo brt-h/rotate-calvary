@@ -133,7 +133,7 @@ async def health_check():
 final_output = {}
 
 @app.get("/get_final_output")
-async def health_check():
+async def get_final_output():
     return {"final_output": final_output}
 
 @app.get("/get_storybook/")
@@ -201,7 +201,11 @@ def generate_storybook(task_id, user_input, total_pages):
                     'total': 4,
                     'current': 1
                 },
-                'data': {'title': title['title']}
+                'data': {
+                    'user_input': user_input,
+                    'total_pages': total_pages,
+                    'title': title['title']
+                    }
             })
             text_description = text_description_chain({"total_pages":total_pages,"title":title,"user_input":user_input})
             tasks[task_id].put({
@@ -211,6 +215,8 @@ def generate_storybook(task_id, user_input, total_pages):
                     'current': 2
                 },
                 'data': {
+                    'user_input': user_input,
+                    'total_pages': total_pages,
                     'title': title['title'],
                     'text_description': parse_text(text_description['text_description'])
                 }
@@ -223,6 +229,8 @@ def generate_storybook(task_id, user_input, total_pages):
                     'current': 3
                 },
                 'data': {
+                    'user_input': user_input,
+                    'total_pages': total_pages,
                     'title': title['title'],
                     'text_description': parse_text(text_description['text_description']),
                     'image_description': parse_text(image_description['image_description'])
@@ -238,16 +246,10 @@ def generate_storybook(task_id, user_input, total_pages):
     elapsed_time = end_time - start_time
     print(f"Text execution time: {elapsed_time:.2f} seconds")
 
-    # parse text description
-    parsed_text_description = parse_text(text_description['text_description'])
-
-    # parse image description
-    parsed_image_description = parse_text(image_description['image_description'])
-
     start_time = time.time()
     illustrations = []
     # TODO make additional endpoint for base64 converted images?
-    for page in parsed_image_description:
+    for page in parse_text(image_description['image_description']):
         image = generate_illustration(page)
         illustrations.append(image)
         # base64image = image_to_base64(image)
@@ -259,6 +261,8 @@ def generate_storybook(task_id, user_input, total_pages):
                 'current': 4
             },
             'data': {
+                'user_input': user_input,
+                'total_pages': total_pages,
                 'title': title['title'],
                 'text_description': parse_text(text_description['text_description']),
                 'image_description': parse_text(image_description['image_description']),
@@ -269,22 +273,31 @@ def generate_storybook(task_id, user_input, total_pages):
     elapsed_time = end_time - start_time
     print(f"image execution time: {elapsed_time:.2f} seconds")
 
-    # build final_ouput object for API endpoint
-    final_output['user_input'] = user_input # string
-    final_output['total_pages'] = total_pages # int
-    final_output['title'] = title['title'] # string
-    final_output['text_description'] = parsed_text_description # list of strings
-    final_output['image_description'] = parsed_image_description # list of strings
-    final_output['illustrations'] = illustrations # list of strings (base64 encoded images)
-
     tasks[task_id].put({
         'status': 'done',
         'progress': {
             'total': 4,
             'current': 4
         },
-        'data': final_output
+        'data': {
+            'user_input': user_input,
+            'total_pages': total_pages,
+            'title': title['title'],
+            'text_description': parse_text(text_description['text_description']),
+            'image_description': parse_text(image_description['image_description']),
+            'illustrations': illustrations
+        }
     })
+
+    # build final_ouput object for API endpoint
+    final_output = {
+        'user_input': user_input, # string
+        'total_pages': total_pages, # int
+        'title': title['title'], # string
+        'text_description': parse_text(text_description['text_description']), # list of strings
+        'image_description': parse_text(image_description['image_description']), # list of strings
+        'illustrations': illustrations # list of strings (image urls)
+    }
 
     # Don't forget to remove the task from tasks when it's done
     # with lock:
