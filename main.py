@@ -14,7 +14,6 @@ import json
 import re
 import base64
 import asyncio
-import secrets
 from generate_illustration import generate_illustration
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -27,8 +26,7 @@ from langchain.chains import SequentialChain
 from langchain.callbacks import get_openai_callback
 from langchain.chains import OpenAIModerationChain
 from io import BytesIO
-from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi import FastAPI, BackgroundTasks
 from sse_starlette.sse import EventSourceResponse
 from queue import Queue
 from threading import Lock
@@ -37,9 +35,6 @@ load_dotenv()
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 openai.api_key = OPENAI_API_KEY
-
-HTTPBASIC_USERNAME = os.getenv('HTTPBASIC_USERNAME')
-HTTPBASIC_PASSWORD = os.getenv('HTTPBASIC_PASSWORD')
 
 # llm = OpenAI(model_name="text-davinci-003",temperature=.7) # costs about ~$0.045 per run, seems to output a fraction of the pages asked for
 # llm = ChatOpenAI(model_name="gpt-3.5-turbo",temperature=.7) # costs about ~$0.005 per run, seems prone to formatting errors
@@ -109,20 +104,6 @@ def image_to_base64(image):
     img_str = base64.b64encode(buffered.getvalue())
     return img_str.decode('utf-8')
 
-security = HTTPBasic()
-
-# check credentials
-def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username = secrets.compare_digest(credentials.username, HTTPBASIC_USERNAME)
-    correct_password = secrets.compare_digest(credentials.password, HTTPBASIC_PASSWORD)
-    if not (correct_username and correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return credentials.username
-
 app = FastAPI()
 
 # Store updates for each task
@@ -155,7 +136,7 @@ async def get_final_output():
     return {"final_output": final_output}
 
 @app.get("/get_storybook/")
-async def get_storybook(background_tasks: BackgroundTasks, des: str, pgs: int, username: str = Depends(verify_credentials)):
+async def get_storybook(background_tasks: BackgroundTasks, des: str, pgs: int):
     user_input = des
     total_pages = pgs
     # Use a queue to store updates for this task
@@ -203,7 +184,7 @@ def generate_storybook(task_id, user_input, total_pages):
     tasks[task_id].put({
         'status': 'working',
         'progress': {
-            'total': 4,  # total number of steps
+            'total': 5,  # total number of steps
             'current': 0
         },
         'data': None
@@ -218,7 +199,7 @@ def generate_storybook(task_id, user_input, total_pages):
             tasks[task_id].put({
                 'status': 'working',
                 'progress': {
-                    'total': 4,
+                    'total': 5,
                     'current': 1
                 },
                 'data': {
@@ -231,7 +212,7 @@ def generate_storybook(task_id, user_input, total_pages):
             tasks[task_id].put({
                 'status': 'working',
                 'progress': {
-                    'total': 4,
+                    'total': 5,
                     'current': 2
                 },
                 'data': {
@@ -245,7 +226,7 @@ def generate_storybook(task_id, user_input, total_pages):
             tasks[task_id].put({
                 'status': 'working',
                 'progress': {
-                    'total': 4,
+                    'total': 5,
                     'current': 3
                 },
                 'data': {
@@ -277,7 +258,7 @@ def generate_storybook(task_id, user_input, total_pages):
         tasks[task_id].put({
             'status': 'working',
             'progress': {
-                'total': 4,
+                'total': 5,
                 'current': 4
             },
             'data': {
@@ -296,8 +277,8 @@ def generate_storybook(task_id, user_input, total_pages):
     tasks[task_id].put({
         'status': 'done',
         'progress': {
-            'total': 4,
-            'current': 4
+            'total': 5,
+            'current': 5
         },
         'data': {
             'user_input': user_input,
