@@ -311,6 +311,7 @@ def generate_storybook(task_id, user_input, total_pages):
     })
 
     # build final_ouput object for API endpoint
+    global final_output
     final_output = {
         'user_input': user_input, # string
         'total_pages': total_pages, # int
