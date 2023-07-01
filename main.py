@@ -1,4 +1,4 @@
-# TODO: improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts, add logic to check if length of list is equal to total pages, make a title image with text rastered on top, refactor to stream or otherwise improve response time, image consistency efforts, pdf export (front end), save recently created stories (frontend, while waiting), add option to select model tempterature
+# TODO: improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts, add logic to check if length of list is equal to total pages, make a title image with text rastered on top, refactor to stream or otherwise improve response time, image consistency efforts, pdf export (front end), save recently created stories (frontend, while waiting), add option to select model tempterature, fix promot to work with 1 page storybook
 
 # Some dependancies:
 # !pip install python-dotenv
@@ -64,7 +64,7 @@ text_description_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="t
 
 # This is an LLMChain to write the image descriptions of a picture book given title and user_input.
 template = """You are an expert at creating input prompts for text-to-image neural networks. The system accepts as correct the query string, where all arguments are separated by commas.
-The words in prompt are crucial. Users need to prompt what they want to see, specifying artist names, media sources, or art styles to get desired results. Be descriptive in a manne similar to prompts provided below about what you want. It is more sensitive to precise wording. That includes adjectives and prepositions like “in front of [x]“, and “taken by [camera name]“.
+The words in prompt are crucial. Users need to prompt what they want to see, specifying artist names, media sources, or art styles to get desired results. Be descriptive in a manner similar to prompts provided below about what you want. It is more sensitive to precise wording. That includes adjectives and prepositions like “in front of [x]“, and “taken by [camera name]“.
 It also supports weights. By bracketing the words you can change their importance. For example, (rainy) would be twice as important compared to "rainy" for the model, and [rainy] would be half as important.
 
 Write a medium lenth prompt, like below. Too long and it would fail to generate, too short and it would generate crap. Be as detailed as possible and avoid both scenarios at any cost.
@@ -229,6 +229,7 @@ def generate_storybook(task_id, user_input, total_pages):
                     }
             })
             text_description = text_description_chain({"total_pages":total_pages,"title":title,"user_input":user_input})
+            print(f'Debug: Text Description: {text_description}')
             tasks[task_id].put({
                 'status': 'working',
                 'progress': {
