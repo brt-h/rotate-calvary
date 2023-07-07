@@ -1,5 +1,6 @@
 # rotate-calvary
-# https://storybook-generator.vercel.app/
+# [backend documentation](https://rotate-calvary.fly.dev/docs)
+# [try the front-end](https://storybook-generator.vercel.app/)
 
 Backend for a web application that uses AI to generate storybooks given user inputs, including a description (the main idea of the story) and the total number of pages.
 
