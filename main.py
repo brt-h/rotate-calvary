@@ -15,7 +15,7 @@ import re
 import base64
 import asyncio
 import secrets
-from generate_illustration import generate_illustration
+from generate_illustration_stabilityai import generate_illustration # (optional) swap with generate_illustration_openai here
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -118,7 +118,7 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
     if not (correct_username and correct_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail=f"Incorrect username or password",
             headers={"WWW-Authenticate": "Basic"},
         )
     return credentials.username
@@ -134,7 +134,7 @@ origins = [
     "http://localhost:3000",  # React app
     "http://localhost:8080",  # FastAPI server (change if different)
     "https://rotate-calvary.fly.dev",
-    "https://storybook-generator.vercel.app"
+    "https://picturebook-generator.vercel.app"
 ]
 
 app.add_middleware(

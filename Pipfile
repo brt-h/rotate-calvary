@@ -12,6 +12,7 @@ langchain = "*"
 sse-starlette = "*"
 sseclient = "*"
 pillow = "*"
+boto3 = "*"
 
 [dev-packages]
 
