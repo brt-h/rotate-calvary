@@ -7,18 +7,23 @@
 # !pip install uvicorn
 # !pip install langchain
 
-import time
-import os
-import openai
-import json
-import re
-import base64
 import asyncio
+import base64
+import json
+import os
+import re
 import secrets
-from generate_illustration_stabilityai import generate_illustration # (optional) swap with generate_illustration_openai here
+import time
+import threading
+from io import BytesIO
+from queue import Queue
+from threading import Lock
+
+import openai
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from langchain.llms import OpenAI # was used for old known good but expensive model
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain
@@ -26,12 +31,8 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import SequentialChain
 from langchain.callbacks import get_openai_callback
 from langchain.chains import OpenAIModerationChain
-from io import BytesIO
-from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sse_starlette.sse import EventSourceResponse
-from queue import Queue
-from threading import Lock
+from generate_illustration_stabilityai import generate_illustration # (optional) swap with generate_illustration_openai here
 
 load_dotenv()
 
@@ -86,13 +87,6 @@ Text for each page:
 Text-to-image neural network input prompts for each of the {total_pages} pages for the above picture book:"""
 prompt_template = PromptTemplate(input_variables=["total_pages","title","text_description"], template=template)
 image_description_chain = LLMChain(llm=llm, prompt=prompt_template, output_key="image_description")
-
-# DEPRICATED This is the overall chain where we run these three chains in sequence.
-# overall_chain = SequentialChain(
-#     chains=[title_chain, text_description_chain, image_description_chain],
-#     input_variables=["total_pages","user_input"],
-#     output_variables=["title","text_description","image_description"],
-#     verbose=True)
 
 # parse text_description string to Python object 
 def parse_text(input_text):
@@ -196,6 +190,13 @@ async def generate_events(updates):
             # If there are no updates, yield a keep alive comment
             yield ": keep alive\n\n" #  in the context of Server-Sent Events (SSE), a comment is defined as a line starting with :
             await asyncio.sleep(STREAM_DELAY)
+
+# delete storybook after a delay
+def delete_storybook(task_id, delay):
+    time.sleep(delay)  # Delay in seconds
+    with lock:
+        del tasks[task_id]
+    print(f'Storybook with task_id: {task_id} deleted after {delay} seconds')
 
 # Moderation check, model usage information, call chain with user input, build final_output object
 def generate_storybook(task_id, user_input, total_pages):
@@ -322,10 +323,8 @@ def generate_storybook(task_id, user_input, total_pages):
         'illustrations': illustrations # list of strings (image urls)
     }
 
-    # Don't forget to remove the task from tasks when it's done
-    # with lock:
-    #     del tasks[task_id]
-    # TODO delete storybook after x period of time
+    # Remove the task from tasks when it's done
+    delay = 3600  # For example, 1 hour = 3600 seconds
+    threading.Thread(target=delete_storybook, args=(task_id, delay)).start()
 
-    # print(final_output)
     return final_output
