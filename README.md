@@ -3,7 +3,7 @@ Backend for a web application that uses AI to generate storybooks given user inp
 
 ### Documentation and Demo
 - [Backend OpenAPI Documentation](https://rotate-calvary.fly.dev/docs)
-- [Try the Front-end Demo](https://storybook-generator.vercel.app/)
+- [Try the Front-end Demo](https://picturebook-generator.vercel.app/)
 
 ### Tech Stack
 The application uses:
