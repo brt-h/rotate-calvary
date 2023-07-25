@@ -1,10 +1,3 @@
-# Some dependancies:
-# !pip install python-dotenv
-# !pip install fastapi
-# !pip install openai
-# !pip install uvicorn
-# !pip install langchain
-
 import asyncio
 import json
 import os
