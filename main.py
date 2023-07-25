@@ -1,5 +1,3 @@
-# TODO: improve response speed by breaking Python response object, add logic to create cohesive design language for all image prompts, add logic to check if length of list is equal to total pages, make a title image with text rastered on top, refactor to stream or otherwise improve response time, image consistency efforts, pdf export (front end), save recently created stories (frontend, while waiting), add option to select model tempterature, fix promot to work with 1 page storybook
-
 # Some dependancies:
 # !pip install python-dotenv
 # !pip install fastapi
@@ -8,7 +6,6 @@
 # !pip install langchain
 
 import asyncio
-import base64
 import json
 import os
 import re
@@ -24,7 +21,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from langchain.llms import OpenAI # was used for old known good but expensive model
+from langchain.llms import OpenAI # used for text-davinci-003
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
@@ -42,9 +39,9 @@ openai.api_key = OPENAI_API_KEY
 HTTPBASIC_USERNAME = os.getenv('HTTPBASIC_USERNAME')
 HTTPBASIC_PASSWORD = os.getenv('HTTPBASIC_PASSWORD')
 
-# llm = OpenAI(model_name="text-davinci-003",temperature=.7) # costs about ~$0.045 per run, seems to output a fraction of the pages asked for
-# llm = ChatOpenAI(model_name="gpt-3.5-turbo",temperature=.7) # costs about ~$0.005 per run, seems prone to formatting errors
-llm = ChatOpenAI(model_name="gpt-4", temperature=.7, request_timeout=240) # costs about ~$0.155 per run, seems higher quality, might be slowest
+# llm = OpenAI(model_name="text-davinci-003",temperature=.7) # tends to output a fraction of the pages requested but in the correct format
+# llm = ChatOpenAI(model_name="gpt-3.5-turbo",temperature=.7) # seems prone to formatting errors but outputs all of the pages requested
+llm = ChatOpenAI(model_name="gpt-4", temperature=.7, request_timeout=240) # consistently outputs the correct number of pages in the correct format (minimum 2 pages)
 
 # This is an LLMChain to create a title given a scentence/topic.
 template = """You are a creative picture book writer. Given a sentence/topic, it is your job to create a title suitable for a picture book.
@@ -95,13 +92,6 @@ def parse_text(input_text):
     for match in page_pattern.finditer(input_text):
         pages.append(match.group(2).strip())
     return pages
-
-#  convert images to serializable format. 
-def image_to_base64(image):
-    buffered = BytesIO()
-    image.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue())
-    return img_str.decode('utf-8')
 
 security = HTTPBasic()
 
@@ -262,7 +252,7 @@ def generate_storybook(task_id, user_input, total_pages):
             print(f"Total Tokens: {cb.total_tokens}")
             print(f"Prompt Tokens: {cb.prompt_tokens}")
             print(f"Completion Tokens: {cb.completion_tokens}")
-            print(f"Total Cost (USD): ${cb.total_cost}")
+            print(f"Text Generation Total Cost (USD): ${cb.total_cost}")
     else:
         print("Vibe check failed.(moderation=False)")
     end_time = time.time()
@@ -271,12 +261,9 @@ def generate_storybook(task_id, user_input, total_pages):
 
     start_time = time.time()
     illustrations = []
-    # TODO make additional endpoint for base64 converted images?
     for page in parse_text(image_description['image_description']):
         image = generate_illustration(page)
         illustrations.append(image)
-        # base64image = image_to_base64(image)
-        # illustrations.append(base64image)
         tasks[task_id].put({
             'status': 'working',
             'progress': {
