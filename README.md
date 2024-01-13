@@ -1,4 +1,6 @@
 # Rotate-Calvary
+![1688745552108](https://github.com/brt-h/brt-h/assets/13157542/3bc9396c-0c74-4e07-9590-0fea03c18bf1)
+
 Backend for a web application that uses AI to generate storybooks given user inputs, including a description (the main idea of the story) and the total number of pages.
 
 ### Documentation and Demo
